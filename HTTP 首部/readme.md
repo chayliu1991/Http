@@ -251,6 +251,45 @@ Cache-Control: private, community="UCI"
 
 如上例， Cache-Control 首部字段本身没有 community 这个指令。借助 extension tokens 实现了该指令的添加。如果缓存服务器不能理解 community 这个新指令， 就会直接忽略。因此， extension tokens 仅对能理解它的缓存服务器来说是有意义的。  
 
+## Connection  
+
+Connection 首部字段具备如下两个作用：
+
+- 控制不再转发给代理的首部字段  
+- 管理持久连接 
+
+### 控制不再转发给代理的首部字段  
+
+```
+Connection: 不再转发的首部字段名
+```
+
+![](./img/connection_upgrade.png)
+
+在客户端发送请求和服务器返回响应内，使用 Connection 首部字段，可控制不再转发给代理的首部字段（即 Hop-by-hop 首部）。  
+
+### 管理持久连接  
+
+```
+Connection: close
+```
+
+![](./img/connection_close.png)
+
+HTTP/1.1 版本的默认连接都是持久连接。为此，客户端会在持久连接上连续发送请求。当服务器端想明确断开连接时，则指定 Connection 首部字段的值为 Close。
+
+```
+Connection: Keep-Alive
+```
+
+![](./img/connection_keepalive.png)
+
+HTTP/1.1 之前的 HTTP 版本的默认连接都是非持久连接。为此，如果想在旧版本的 HTTP 协议上维持持续连接，则需要指定 Connection 首部字段的值为 Keep-Alive。  
+
+
+
+
+
 
 
 
