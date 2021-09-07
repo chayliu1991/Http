@@ -75,7 +75,7 @@ HTTP/1.1 中，除下面 8 个首部字段之外，其他所有字段都属于�
 - Transfer-Encoding
 - Upgrade
 
-# HTTP/1.1 通用首部字段  
+# 通用首部字段  
 
 通用首部字段是指，请求报文和响应报文双方都会使用的首部。  
 
@@ -394,6 +394,257 @@ Warning: [警告码][警告的主机:端口号]“[警告内容]” ([日期时�
 ```
 
 HTTP/1.1 中定义了 7 种警告。警告码对应的警告内容仅推荐参考。另外，警告码具备扩展性，今后有可能追加新的警告码。  
+
+![](./img/warning_code.png)
+
+# 请求首部字段  
+
+请求首部字段是从客户端往服务器端发送请求报文中所使用的字段，用于补充请求的附加信息、 客户端信息、对响应内容相关的优先级等内容。  
+
+![](./img/request_headers.png)
+
+## Accept  
+
+![](./img/accept.png)
+
+```
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+```
+
+Accept 首部字段可通知服务器，用户代理能够处理的媒体类型及媒体类型的相对优先级。 可使用 type/subtype 这种形式，一次指定多种媒体类型。  
+
+- 文本文件  
+
+```
+text/html, text/plain, text/css ...
+application/xhtml+xml, application/xml ...
+```
+
+- 图片文件
+```
+image/jpeg, image/gif, image/png ...  
+```
+
+- 视频文件  
+
+```
+video/mpeg, video/quicktime ...
+```
+
+- 应用程序使用的二进制文件  
+
+```
+application/octet-stream, application/zip ...
+```
+
+若想要给显示的媒体类型增加优先级，则使用 q= 来额外表示权重值 A，用分号（ ;）进行分隔。权重值 q 的范围是 0~1（可精确到小数点后3 位），且 1 为最大值。不指定权重 q 值时，默认权重为 q=1.0。当服务器提供多种内容时，将会首先返回权重值最高的媒体类型。  
+
+## Accept-Charset  
+
+Accept-Charset 首部字段可用来通知服务器用户代理支持的字符集及字符集的相对优先顺序。可一次性指定多种字符集。  
+
+![](./img/accept_charset.png)
+
+```
+Accept-Charset: iso-8859-5, unicode-1-1;q=0.8
+```
+
+## Accept-Encoding  
+
+Accept-Encoding 首部字段用来告知服务器用户代理支持的内容编码及内容编码的优先级顺序。可一次性指定多种内容编码。  
+
+![](./img/accept_encoding.png)
+
+```
+Accept-Encoding: gzip, deflate
+```
+
+常见的编码格式：
+
+- gzip，由文件压缩程序 gzip（ GNU zip）生成的编码格式（ RFC1952）
+- compress，由 UNIX 文件压缩程序 compress 生成的编码格式
+- deflate，组合使用 zlib 格式（ RFC1950）及由 deflate 压缩算法（ RFC1951）生成的编码格式
+- identity，不执行压缩或不会变化的默认编码格式
+
+采用权重 q 值来表示相对优先级， 这点与首部字段 Accept 相同。另外，也可使用星号（*）作为通配符，指定任意的编码格式。  
+
+## Accept-Language  
+
+首部字段 Accept-Language 用来告知服务器用户代理能够处理的自然语言集（指中文或英文等），以及自然语言集的相对优先级。可一次指定多种自然语言集。  
+
+![](./img/accept_language.png)
+
+```
+Accept-Language: zh-cn,zh;q=0.7,en-us,en;q=0.3
+```
+
+## Authorization  
+
+首部字段 Authorization 是用来告知服务器，用户代理的认证信息（证书值）。通常，想要通过服务器认证的用户代理会在接收到返回的 401 状态码响应后，把首部字段 Authorization 加入请求中。  
+
+![](./img/authorization.png)
+
+```
+Authorization: Basic dWVub3NlbjpwYXNzd29yZA==
+```
+
+## Expect  
+
+客户端使用首部字段 Expect 来告知服务器，期望出现的某种特定行为。因服务器无法理解客户端的期望作出回应而发生错误时，会返回状态码 417 Expectation Failed。  
+
+![](./img/expect.png)
+
+```
+Expect: 100-continue
+```
+
+## From  
+
+首部字段 From 用来告知服务器使用用户代理的用户的电子邮件地址。   
+
+![](./img/from.png)
+
+使用代理时，应尽可能包含 From 首部字段（但可能会因代理不同，将电子邮件地址记录在 User-Agent 首部字段内）。  
+
+## Host  
+
+首部字段 Host 会告知服务器，请求的资源所处的互联网主机名和端口号。 Host 首部字段在 HTTP/1.1 规范内是唯一一个必须被包含在请求内的首部字段。  
+
+![](./img/host.png)
+
+```
+Host: www.hackr.jp
+```
+
+若服务器未设定主机名，那直接发送一个空值即可。  
+
+```
+Host:
+```
+
+## If-Match  
+
+形如 If-xxx 这种样式的请求首部字段，都可称为条件请求。服务器接收到附带条件的请求后，只有判断指定条件为真时，才会执行请求。  
+
+![](./img/if_match.png)
+
+```
+If-Match: "123456"
+```
+
+![](./img/if_match_etag.png)
+
+服务器会比对 If-Match 的字段值和资源的 ETag 值，仅当两者一致时，才会执行请求。反之，则返回状态码 412 Precondition Failed 的响应。  
+
+还可以使用星号（ *）指定 If-Match 的字段值。针对这种情况，服务器将会忽略 ETag 的值，只要资源存在就处理请求。  
+
+## If-Modified-Since  
+
+首部字段 If-Modified-Since，属附带条件之一，它会告知服务器若If-Modified-Since 字段值早于资源的更新时间， 则希望能处理该请求。  而在指定 If-Modified-Since 字段值的日期时间之后，如果请求的资源都没有过更新，则返回状态码 304 Not Modified 的响应。  
+
+![](./img/if_modified_since.png)
+
+```
+If-Modified-Since: Thu, 15 Apr 2004 00:00:00 GMT
+```
+
+## If-None-Match  
+
+首部字段 If-None-Match 属于附带条件之一。它和首部字段 IfMatch 作用相反。 用于指定 If-None-Match 字段值的实体标记（ ETag）值与请求资源的 ETag 不一致时，它就告知服务器处理该请求。
+
+![](./img/if_none_match.png)
+
+## If-Range  
+
+首部字段 If-Range 属于附带条件之一。它告知服务器若指定的If-Range 字段值（ ETag 值或者时间）和请求资源的 ETag 值或时间相一致时，则作为范围请求处理。反之，则返回全体资源。  
+
+![](./img/if_range.png)
+
+如果不使用首部字段 If-Range 则需要进行两次处理：
+
+![](./img/if_range2.png)
+
+服务器端的资源如果更新， 那客户端持有资源中的一部分也会随之无效，当然，范围请求作为前提是无效的。 这时，服务器会暂且以状态码 412 Precondition Failed 作为响应返回，其目的是催促客户端再次发送请求。这样一来，与使用首部字段 If-Range 比起来，就需要花费两倍的功夫。  
+
+## If-Unmodified-Since  
+
+首部字段 If-Unmodified-Since 和首部字段 If-Modified-Since 的作用相反。它的作用的是告知服务器，指定的请求资源只有在字段值内指定的日期时间之后，未发生更新的情况下，才能处理请求。如果在指定日期时间后发生了更新，则以状态码 412 Precondition Failed 作为响应返回。  
+
+```
+If-Unmodified-Since: Thu, 03 Jul 2012 00:00:00 GMT
+```
+
+## Max-Forwards  
+
+通 过 TRACE 方 法 或 OPTIONS 方 法， 发 送 包 含 首 部 字 段 MaxForwards 的请求时， 该字段以十进制整数形式指定可经过的服务器最大数目。服务器在往下一个服务器转发请求之前， Max-Forwards 的值减1 后重新赋值。 当服务器接收到 Max-Forwards 值为 0 的请求时，则不再进行转发，而是直接返回响应。  
+
+![](./img/max_forwards.png)
+
+```
+Max-Forwards: 10
+```
+
+利用 Max-Forwards  可以对一些问题进行排查，由于当 Max-Forwards 字段值为 0 时，服务器就会立即返回响应，由此我们至少可以对以那台服务器为终点的传输路径的通信状况有所把握。  
+
+![](./img/max_forwards2.png)
+
+## Proxy-Authorization  
+
+接收到从代理服务器发来的认证质询时，客户端会发送包含首部字段 Proxy-Authorization 的请求，以告知服务器认证所需要的信息。  
+
+这个行为是与客户端和服务器之间的 HTTP 访问认证相类似的，不同之处在于， 认证行为发生在客户端与代理之间。客户端与服务器之间的认证，使用首部字段 Authorization 可起到相同作用。  
+
+## Range  
+
+对于只需获取部分资源的范围请求，包含首部字段 Range 即可告知服务器资源的指定范围。   
+
+```
+Range: bytes=5001-10000
+```
+
+接收到附带 Range 首部字段请求的服务器，会在处理请求之后返回状态码为 206 Partial Content 的响应。无法处理该范围请求时，则会返回状态码 200 OK 的响应及全部资源。 
+
+## Referer  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
