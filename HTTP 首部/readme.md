@@ -606,13 +606,36 @@ Range: bytes=5001-10000
 
 ## Referer  
 
+首部字段 Referer 会告知服务器请求的原始资源的 URI。  
 
+![](./img/refer.png)
 
+客户端一般都会发送 Referer 首部字段给服务器。但当直接在浏览器的地址栏输入 URI，或出于安全性的考虑时，也可以不发送该首部字段。  
 
+## TE  
 
+首部字段 TE 会告知服务器客户端能够处理响应的传输编码方式及相对优先级。 它和首部字段 Accept-Encoding 的功能很相像，但是用于传输编码。
 
+```
+TE: gzip, deflate;q=0.5
+```
 
+首部字段 TE 除指定传输编码之外，还可以指定伴随 trailer 字段的分块传输编码的方式。应用后者时，只需把 trailers 赋值给该字段值。  
 
+```
+TE: trailers
+```
+
+## User-Agent  
+
+首部字段 User-Agent 会将创建请求的浏览器和用户代理名称等信息传达给服务器。  
+
+![](./img/user_agent.png)
+
+```
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:13.0) Gecko/⇒
+20100101 Firefox/13.0.1
+```
 
 
 
