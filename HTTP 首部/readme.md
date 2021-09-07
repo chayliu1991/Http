@@ -286,6 +286,117 @@ Connection: Keep-Alive
 
 HTTP/1.1 之前的 HTTP 版本的默认连接都是非持久连接。为此，如果想在旧版本的 HTTP 协议上维持持续连接，则需要指定 Connection 首部字段的值为 Keep-Alive。  
 
+## Date  
+
+首部字段 Date 表明创建 HTTP 报文的日期和时间。  
+
+![](./img/date.png)
+
+HTTP/1.1 协议使用在 RFC1123 中规定的日期时间的格式：
+
+```
+Date: Tue, 03 Jul 2012 04:40:59 GMT
+```
+
+之前的 HTTP 协议版本中使用在 RFC850 中定义的格式：
+
+```
+Date: Tue, 03-Jul-12 04:40:59 GMT
+```
+
+还有一种格式与 C 标准库内的 asctime() 函数的输出格式一致：
+
+```
+Date: Tue Jul 03 04:40:59 2012
+```
+
+## Pragma  
+
+Pragma 是 HTTP/1.1 之前版本的历史遗留字段，仅作为与 HTTP/1.0 的向后兼容而定义：
+
+```
+Pragma: no-cache
+```
+
+该首部字段属于通用首部字段，但只用在客户端发送的请求中。客户端会要求所有的中间服务器不返回缓存的资源。  
+
+![](./img/pragma_no_cache.png)
+
+所有的中间服务器如果都能以 HTTP/1.1 为基准，那直接采用Cache-Control: no-cache 指定缓存的处理方式是最为理想的。但要整体掌握全部中间服务器使用的 HTTP 协议版本却是不现实的。因此，发送的请求会同时含有下面两个首部字段：
+
+```
+Cache-Control: no-cache
+Pragma: no-cache
+```
+
+## Trailer  
+
+![](./img/trailer.png)
+
+首部字段 Trailer 会事先说明在报文主体后记录了哪些首部字段。该首部字段可应用在 HTTP/1.1 版本分块传输编码时。  
+
+## Transfer-Encoding  
+
+首部字段 Transfer-Encoding 规定了传输报文主体时采用的编码方式。  
+
+![](./img/transfer_encoding.png)
+
+HTTP/1.1 的传输编码方式仅对分块传输编码有效。  
+
+```
+HTTP/1.1 200 OK
+Date: Tue, 03 Jul 2012 04:40:56 GMT
+Cache-Control: public, max-age=604800
+Content-Type: text/javascript; charset=utf-8
+Expires: Tue, 10 Jul 2012 04:40:56 GMT
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+Content-Encoding: gzip
+Transfer-Encoding: chunked
+Connection: keep-alive
+cf0　　←16进制(10进制为3312)
+...3312字节分块数据...
+392　　←16进制(10进制为914)
+...914字节分块数据...
+0
+```
+
+以上用例中，正如在首部字段 Transfer-Encoding 中指定的那样，有效使用分块传输编码， 且分别被分成 3312 字节和 914 字节大小的分块数据。  
+
+## Upgrade  
+
+首部字段 Upgrade 用于检测 HTTP 协议及其他协议是否可使用更高的版本进行通信，其参数值可以用来指定一个完全不同的通信协议。  
+
+<img src="./img/upgrade.png" style="zoom:75%;" />
+
+Connection 的值被指定为 Upgrade。Upgrade 首部字段产生作用的 Upgrade 对象仅限于客户端和邻接服务器之间。因此，使用首部字段 Upgrade 时，还需要额外指定 Connection:Upgrade。
+
+对于附有首部字段 Upgrade 的请求，服务器可用 101 Switching Protocols 状态码作为响应返回。  
+
+## Via  
+
+使用首部字段 Via 是为了追踪客户端与服务器之间的请求和响应报文的传输路径。
+
+报文经过代理或网关时， 会先在首部字段 Via 中附加该服务器的信息，然后再进行转发。   
+
+首部字段 Via 不仅用于追踪报文的转发，还可避免请求回环的发生。所以必须在经过代理时附加该首部字段内容。  
+
+![](./img/via.png)
+
+## Warning  
+
+HTTP/1.1 的 Warning 首部是从 HTTP/1.0 的响应首部（ Retry-After）演变过来的。该首部通常会告知用户一些与缓存相关的问题的警告。  
+
+Warning 首部的格式如下。最后的日期时间部分可省略：
+
+```
+Warning: [警告码][警告的主机:端口号]“[警告内容]” ([日期时间])
+```
+
+HTTP/1.1 中定义了 7 种警告。警告码对应的警告内容仅推荐参考。另外，警告码具备扩展性，今后有可能追加新的警告码。  
+
+
+
 
 
 
