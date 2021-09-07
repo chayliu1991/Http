@@ -760,21 +760,131 @@ Vary: Accept-Language
 
 当代理服务器接收到带有 Vary 首部字段指定获取资源的请求时，如果使用的 Accept-Language 字段的值相同，那么就直接从缓存返回响应。反之，则需要先从源服务器端获取资源后才能作为响应返回。
 
+从代理服务器接收到源服务器返回包含 Vary 指定项的响应之后，若再要进行缓存， 仅对请求中含有相同 Vary 指定首部字段的请求返回缓存。即使对相同资源发起请求，但由于 Vary 指定的首部字段不相同，因此必须要从源服务器重新获取资源。  
+
+## WWW-Authenticate  
+
+首部字段 WWW-Authenticate 用于 HTTP 访问认证。它会告知客户端适用于访问请求 URI 所指定资源的认证方案（ Basic 或是 Digest）和带参数提示的质询（ challenge）。状态码 401 Unauthorized 响应中，肯定带有首部字段 WWW-Authenticate。  
+
+```
+WWW-Authenticate: Basic realm="Usagidesign Auth"
+```
+
+# 实体首部字段  
+
+实体首部字段是包含在请求报文和响应报文中的实体部分所使用的首部，用于补充内容的更新时间等与实体相关的信息。  
+
+![](./img/entity_headers.png)
+
+## Allow  
+
+首部字段 Allow 用于通知客户端能够支持 Request-URI 指定资源的所有 HTTP 方法。当服务器接收到不支持的 HTTP 方法时，会以状态码405 Method Not Allowed 作为响应返回。与此同时，还会把所有能支持的 HTTP 方法写入首部字段 Allow 后返回。  
+
+![](./img/allow.png)
+
+```
+Allow: GET, HEAD
+```
+
+## Content-Encoding  
+
+首部字段 Content-Encoding 会告知客户端服务器对实体的主体部分选用的内容编码方式。 内容编码是指在不丢失实体信息的前提下所进行的压缩。  
+
+![](./img/content_encoding.png)
+
+```
+Content-Encoding: gzip
+```
+
+主要采用以下 4 种内容编码的方式：
+
+- gzip
+- compress
+- deflate
+- identity
+
+## Content-Language  
+
+首部字段 Content-Language 会告知客户端，实体主体使用的自然语言（指中文或英文等语言）。  
+
+![](./img/content_language.png)
+
+```
+Content-Language: zh-CN
+```
 
 
+## Content-Length  
 
+首部字段 Content-Length 表明了实体主体部分的大小（单位是字节）。对实体主体进行内容编码传输时， 不能再使用 Content-Length 首部字段。  
 
+![](./img/content_length.png)
 
+```
+Content-Length: 15000
+```
 
+## Content-Location  
 
+首部字段 Content-Location 给出与报文主体部分相对应的 URI。和首部字段 Location 不同， Content-Location 表示的是报文主体返回资源对应的 URI。  
 
+```
+Content-Location: http://www.hackr.jp/index-ja.html
+```
 
+## Content-MD5  
 
+首部字段 Content-MD5 是一串由 MD5 算法生成的值，其目的在于检查报文主体在传输过程中是否保持完整，以及确认传输到达。  
 
+![](./img/content_md5.png)
 
+```
+Content-MD5: OGFkZDUwNGVhNGY3N2MxMDIwZmQ4NTBmY2IyTY==
+```
 
+对报文主体执行 MD5 算法获得的 128 位二进制数，再通过 Base64 编码后将结果写入 Content-MD5 字段值。由于 HTTP 首部无法记录二进制值，所以要通过Base64 编码处理。为确保报文的有效性，作为接收方的客户端会对报文主体再执行一次相同的 MD5 算法。计算出的值与字段值作比较后，即可判断出报文主体的准确性。  
 
+采用这种方法， 对内容上的偶发性改变是无从查证的，也无法检测出恶意篡改。 其中一个原因在于，内容如果能够被篡改，那么同时意味着 Content-MD5 也可重新计算然后被篡改。所以处在接收阶段的客户端是无法意识到报文主体以及首部字段 Content-MD5 是已经被篡改过的。  
 
+## Content-Range
+
+针对范围请求，返回响应时使用的首部字段 Content-Range，能告知客户端作为响应返回的实体的哪个部分符合范围请求。 字段值以字节为单位，表示当前发送部分及整个实体大小。  
+
+![](./img/content_range.png)
+
+```
+Content-Range: bytes 5001-10000/10000
+```
+
+## Content-Type  
+
+首部字段 Content-Type 说明了实体主体内对象的媒体类型。和首部字段 Accept 一样，字段值用 type/subtype 形式赋值。  
+
+```
+Content-Type: text/html; charset=UTF-8
+```
+
+## Expires  
+
+首部字段 Expires 会将资源失效的日期告知客户端。缓存服务器在接收到含有首部字段 Expires 的响应后，会以缓存来应答请求，在Expires 字段值指定的时间之前，响应的副本会一直被保存。当超过指定的时间后，缓存服务器在请求发送过来时，会转向源服务器请求资源。    
+
+![](./img/expires.png)
+
+```
+Expires: Wed, 04 Jul 2012 08:26:05 GMT
+```
+
+当首部字段 Cache-Control 有指定 max-age 指令时，比起首部字段 Expires，会优先处理 max-age 指令。  
+
+## Last-Modified  
+
+首部字段 Last-Modified 指明资源最终修改的时间。一般来说，这个值就是 Request-URI 指定资源被修改的时间。但类似使用 CGI 脚本进行动态数据处理时，该值有可能会变成数据最终修改时的时间。  
+
+![](./img/last_modified.png)
+
+```
+Last-Modified: Wed, 23 May 2012 09:59:55 GMT
+```
 
 
 
