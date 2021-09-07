@@ -886,27 +886,79 @@ Expires: Wed, 04 Jul 2012 08:26:05 GMT
 Last-Modified: Wed, 23 May 2012 09:59:55 GMT
 ```
 
+# 为 Cookie 服务的首部字段  
 
+Cookie 的工作机制是用户识别及状态管理，虽然没有被编入标准化 HTTP/1.1 的 RFC2616 中，但在 Web 网站方面得到了广泛的应用。  
 
+调用 Cookie 时， 由于可校验 Cookie 的有效期，以及发送方的域、路径、协议等信息，所以正规发布的 Cookie 内的数据不会因来自其他 Web 站点和攻击者的攻击而泄露。
 
+至 2013 年 5 月， Cookie 的规格标准文档有以下 4 种：
 
+- 由网景公司颁布的规格标准，网景通信公司设计并开发了 Cookie，并制定相关的规格标准
+- RFC2109，某企业尝试以独立技术对 Cookie 规格进行标准化统筹  
+- RFC2965，为终结 InternetExplorer 浏览器与 NetscapeNavigator 的标准差异而导致的浏览器战争，RFC2965 内定义了新的 HTTP 首部 SetCookie2 和 Cookie2。可事实上，它们几乎没怎么投入使用
+- RFC6265，将网景公司制定的标准作为业界事实标准，重新定义 Cookie 标准后的产物
 
+为 Cookie 服务的首部字段：
 
+![](./img/cookie_header.png)
 
+![](./img/cookies.png)
 
+## Set-Cookie  
 
+```
+Set-Cookie: status=enable; expires=Tue, 05 Jul 2011 07:26:31 GMT; ⇒path=/; domain=.hackr.jp;
+```
 
+当服务器准备开始管理客户端的状态时，会事先告知各种信息。下面的表格列举了 Set-Cookie 的字段值：
 
+![](./img/cookie_attribute.png)
 
+### expires 属性  
 
+Cookie 的 expires 属性指定浏览器可发送 Cookie 的有效期。
 
+当省略 expires 属性时，其有效期仅限于维持浏览器会话（ Session）时间段内。这通常限于浏览器应用程序被关闭之前。  
 
+一旦 Cookie 从服务器端发送至客户端，服务器端就不存在可以显式删除 Cookie 的方法。但可通过覆盖已过期的 Cookie，实现对客户端 Cookie 的实质性删除操作。
 
+### path 属性  
 
+Cookie 的 path 属性可用于限制指定 Cookie 的发送范围的文件目录。不过另有办法可避开这项限制， 看来对其作为安全机制的效果不能抱有期待。  
 
+### domain 属性  
 
+通过 Cookie 的 domain 属性指定的域名可做到与结尾匹配一致。比如，当指定 example.com 后， 除 example.com 以外， www.example.com
+或 www2.example.com 等都可以发送 Cookie。
 
+因此，除了针对具体指定的多个域名发送 Cookie 之外，不指定domain 属性显得更安全。  
 
+### secure 属性  
+
+Cookie 的 secure 属性用于限制 Web 页面仅在 HTTPS 安全连接时，才可以发送 Cookie。
+
+发送 Cookie 时，指定 secure 属性的方法如下所示：
+
+```
+Set-Cookie: name=value; secure
+```
+
+以上例子仅当在 https ： //www.example.com/（ HTTPS）安全连接的情况下才会进行 Cookie 的回收。也就是说，即使域名相同， http://www.example.com/（ HTTP）也不会发生 Cookie 回收行为。
+
+当省略 secure 属性时，不论 HTTP 还是 HTTPS，都会对 Cookie 进行回收。  
+
+### HttpOnly 属性  
+
+Cookie 的 HttpOnly 属性是 Cookie 的扩展功能，它使 JavaScript 脚本无法获得 Cookie。其主要目的为防止跨站脚本攻击（ Cross-site scripting， XSS）对 Cookie 的信息窃取。  
+
+发送指定 HttpOnly 属性的 Cookie 的方法如下所示：
+
+```
+Set-Cookie: name=value; HttpOnly
+```
+
+通过上述设置，通常从 Web 页面内还可以对 Cookie 进行读取操作。但使用 JavaScript 的 document.cookie 就无法读取附加 HttpOnly 属性后的 Cookie 的内容了。因此，也就无法在 XSS 中利用 JavaScript 劫持 Cookie 了。  
 
 
 
