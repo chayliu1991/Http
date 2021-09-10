@@ -960,21 +960,71 @@ Set-Cookie: name=value; HttpOnly
 
 通过上述设置，通常从 Web 页面内还可以对 Cookie 进行读取操作。但使用 JavaScript 的 document.cookie 就无法读取附加 HttpOnly 属性后的 Cookie 的内容了。因此，也就无法在 XSS 中利用 JavaScript 劫持 Cookie 了。  
 
+## Cookie  
 
+首部字段 Cookie 会告知服务器，当客户端想获得 HTTP 状态管理支持时，就会在请求中包含从服务器接收到的 Cookie。接收到多个 Cookie 时，同样可以以多个 Cookie 形式发送。  
 
+```
+Cookie: status=enable
+```
 
+# 其他首部字段  
 
+HTTP 首部字段是可以自行扩展的。所以在 Web 服务器和浏览器的应用上，会出现各种非标准的首部字段。  
 
+## X-Frame-Options  
 
+```
+X-Frame-Options: DENY
+```
 
+首部字段 X-Frame-Options 属于 HTTP 响应首部，用于控制网站内容在其他 Web 网站的 Frame 标签内的显示问题。其主要目的是为了防止点击劫持（ clickjacking）攻击。
+首部字段 X-Frame-Options 有以下两个可指定的字段值：
 
+- DENY ：拒绝
+- SAMEORIGIN ：仅同源域名下的页面（ Top-level-browsing-context）匹配时许可。（比如，当指定 http://hackr.jp/sample.html 页面为SAMEORIGIN 时， 那么 hackr.jp 上所有页面的 frame 都被允许可加载该页面，而 example.com 等其他域名的页面就不行了）  
 
+## X-XSS-Protection  
 
+```
+X-XSS-Protection: 1
+```
 
+首部字段 X-XSS-Protection 属于 HTTP 响应首部，它是针对跨站脚本攻击（ XSS）的一种对策，用于控制浏览器 XSS 防护机制的开关。  
 
+首部字段 X-XSS-Protection 可指定的字段值如下：
 
+- 0 ：将 XSS 过滤设置成无效状态
+- 1 ：将 XSS 过滤设置成有效状态  
 
+## DNT  
 
+```
+DNT: 1
+```
 
+![](./img/dnt.png)
 
+首部字段 DNT 属于 HTTP 请求首部，其中 DNT 是 Do Not Track 的简称，意为拒绝个人信息被收集，是表示拒绝被精准广告追踪的一种方法。  
+
+首部字段 DNT 可指定的字段值如下：
+
+- 0 ：同意被追踪
+- 1 ：拒绝被追踪  
+
+由于首部字段 DNT 的功能具备有效性，所以 Web 服务器需要对 DNT 做对应的支持。  
+
+## P3P  
+
+```
+P3P: CP="CAO DSP LAW CURa ADMa DEVa TAIa PSAa PSDa IVAa IVDa OUR BUS IND UNI COM NAV INT"
+```
+
+首部字段 P3P 属于 HTTP 相应首部，通过利用 P3P（ The Platform for Privacy Preferences，在线隐私偏好平台）技术，可以让 Web 网站上的个人隐私变成一种仅供程序可理解的形式，以达到保护用户隐私的目的。  
+
+要进行 P3P 的设定，需按以下操作步骤进行：
+
+- 步骤 1： 创建 P3P 隐私
+- 步骤 2： 创建 P3P 隐私对照文件后，保存命名在 /w3c/p3p.xml
+- 步骤 3： 从 P3P 隐私中新建 Compact policies 后，输出到 HTTP 响应中  
 
