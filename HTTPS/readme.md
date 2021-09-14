@@ -379,7 +379,31 @@ Handshake Protocol: Client Hello
             Key Share Entry: Group: secp256r1
 ```
 
+注意 “Client Hello” 里的扩展，“supported_versions” 表示这是 TLS1.3，“supported_groups” 是支持的曲线，“key_share” 是曲线对应的参数。
 
+服务器收到 “Client Hello” 同样返回 “Server Hello” 消息，还是要给出一个随机数（Server Random）和选定密码套件。
+
+```
+Handshake Protocol: Server Hello
+    Version: TLS 1.2 (0x0303)
+    Random: 12d2bce6568b063d3dee2…
+    Cipher Suite: TLS_AES_128_GCM_SHA256 (0x1301)
+    Extension: supported_versions (len=2)
+        Supported Version: TLS 1.3 (0x0304)
+    Extension: key_share (len=36)
+        Key Share extension
+            Key Share Entry: Group: x25519, Key Exchange length: 32
+```
+
+表面上看和 TLS1.2 是一样的，重点是后面的扩展。“supported_versions” 里确认使用的是 TLS1.3，然后在 “key_share” 扩展带上曲线和对应的公钥参数。
+
+这时只交换了两条消息，客户端和服务器就拿到了四个共享信息：Client Random 和 Server Random、Client Params 和 Server Params，两边就可以各自用 ECDHE 算出 “Pre-Master”，再用 HKDF 生成主密钥 “Master Secret”，效率比 TLS1.2 提高了一大截。
+
+在算出主密钥后，服务器立刻发出 “Change Cipher Spec” 消息，比 TLS1.2 提早进入加密通信，后面的证书等就都是加密的了，减少了握手时的明文信息泄露。
+
+这里 TLS1.3 还有一个安全强化措施，多了个 “Certificate Verify” 消息，用服务器的私钥把前面的曲线、套件、参数等握手数据加了签名，作用和 “Finished” 消息差不多。但由于是私钥签名，所以强化了身份认证和和防窜改。
+
+这两个 “Hello” 消息之后，客户端验证服务器证书，再发 “Finished” 消息，就正式完成了握手，开始收发 HTTP 报文。
 
 # HTTPS 的优化
 
