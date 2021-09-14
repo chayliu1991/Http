@@ -638,6 +638,18 @@ DoS 攻击（ Denial of Service attack）是一种让运行中的服务呈停止
 
 WAF 拿到 HTTP 请求、响应报文，用字符串处理函数看看有没有关键字、敏感词，或者用正则表达式做一下模式匹配，命中了规则就执行对应的动作，比如返回 403/404。
 
+## 全面的WAF解决方案
+
+ModSecurity 可以说是WAF界“事实上的标准”。ModSecurity 是一个开源的、生产级的 WAF 工具包，历史很悠久，比 Nginx 还要大几岁。
+
+ModSecurity 有两个核心组件。第一个是“规则引擎”，它实现了自定义的 “SecRule” 语言，有自己特定的语法。但 “SecRule” 主要基于正则表达式，还是不够灵活，所以后来也引入了 Lua，实现了脚本化配置。
+
+只有引擎还不够，要让引擎运转起来，还需要完善的防御规则，所以 ModSecurity 的第二个核心组件就是它的“规则集”。
+
+基本的规则集之外，ModSecurity 还额外提供一个更完善的规则集，为网站提供全面可靠的保护。这个规则集的全名叫 “OWASP ModSecurity 核心规则集”（Open Web Application Security Project ModSecurity Core Rule Set），因为名字太长了，所以有时候会简称为“核心规则集”或者 “CRS”。
+
+另外，ModSecurity 还有强大的审计日志（Audit Log）功能，记录任何可疑的数据，供事后离线分析。但在生产环境中会遇到大量的攻击，日志会快速增长，消耗磁盘空间，而且写磁盘也会影响Nginx的性能，所以一般建议把它关闭。
+
 
 
 
