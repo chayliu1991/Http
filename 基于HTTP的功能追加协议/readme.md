@@ -67,15 +67,11 @@ SPDY 以会话层的形式加入， 控制对数据的流动，但还是采用 H
 
 因为 SPDY 基本上只是将单个域名（ IP 地址）的通信多路复用，所以当一个 Web 网站上使用多个域名下的资源，改善效果就会受到限制。  
 
-# 使用浏览器进行全双工通信的 WebSocket  
+# WebSocket  
 
-WebSocket，即 Web 浏览器与 Web 服务器之间全双工通信标准。其中， WebSocket 协议由 IETF 定为标准， WebSocket API 由 W3C 定为标准。  
+WebSocket，即 Web 浏览器与 Web 服务器之间全双工通信标准。其中， WebSocket 协议由 IETF 定为标准， WebSocket API 由 W3C 定为标准。 WebSocket 通信协议在 2011 年 12 月 11 日，被 RFC 6455 - The WebSocket Protocol 定为标准。  
 
-WebSocket 通信协议在 2011 年 12 月 11 日，被 RFC 6455 - The WebSocket Protocol 定为标准。  
-
-一旦 Web 服务器与客户端之间建立起 WebSocket 协议的通信连接，之后所有的通信都依靠这个专用协议进行。 通信过程中可互相发送JSON、 XML、 HTML 或图片等任意格式的数据。
-
-由于是建立在 HTTP 基础上的协议，因此连接的发起方仍是客户端，而一旦确立 WebSocket 通信连接，不论服务器还是客户端，任意一方都可直接向对方发送报文。  
+一旦 Web 服务器与客户端之间建立起 WebSocket 协议的通信连接，之后所有的通信都依靠这个专用协议进行。 通信过程中可互相发送JSON、 XML、 HTML 或图片等任意格式的数据。由于是建立在 HTTP 基础上的协议，因此连接的发起方仍是客户端，而一旦确立 WebSocket 通信连接，不论服务器还是客户端，任意一方都可直接向对方发送报文。  
 
 WebSocket 协议的主要特点：
 
@@ -85,44 +81,51 @@ WebSocket 协议的主要特点：
 - 减少通信量
   - 只要建立起 WebSocket 连接，就希望一直保持连接状态。和 HTTP 相比，不但每次连接时的总开销减少，而且由于 WebSocket 的首部信息很小，通信量也相应减少了
 
+WebSocket的默认端口也选择了 80 和 443，因为现在互联网上的防火墙屏蔽了绝大多数的端口，只对HTTP的80、443端口“放行”，所以WebSocket就可以“伪装”成HTTP协议，比较容易地“穿透”防火墙，与服务器建立连接。
+
+## 帧结构
+
+WebSocket虽然有“帧”，但却没有像HTTP/2那样定义“流”，也就不存在“多路复用”“优先级”等复杂的特性，而它自身就是“全双工”的，也就不需要“服务器推送”。
+
+下图就是 WebSocket 的帧结构定义，长度不固定，最少2个字节，最多14字节：
+
+![](./img/websocket_frame.png)
+
+- 第一个字节的第一位“FIN”是消息结束的标志位，相当于HTTP/2里的“END_STREAM”，表示数据发送完毕。一个消息可以拆成多个帧，接收方看到“FIN”后，就可以把前面的帧拼起来，组成完整的消息，“FIN”后面的三个位是保留位，目前没有任何意义，但必须是 0
+- 第一个字节的后4位很重要，叫“Opcode”，操作码，其实就是帧类型，比如 1 表示帧内容是纯文本，2 表示帧内容是二进制数据，8 是关闭连接，9 和 10 分别是连接保活的 PING 和 PONG
+- 第二个字节第一位是掩码标志位“MASK”，表示帧内容是否使用异或操作（xor）做简单的加密。目前的WebSocket标准规定，客户端发送数据必须使用掩码，而服务器发送则必须不使用掩码
+- 第二个字节后7位是“Payload len”，表示帧内容的长度。它是另一种变长编码，最少 7 位，最多是 7+64 位，也就是额外增加 8 个字节，所以一个 WebSocket帧最大是2^64
+- 长度字段后面是“Masking-key”，掩码密钥，它是由上面的标志位“MASK”决定的，如果使用掩码就是4个字节的随机数，否则就不存在
+
+## 握手
+
 为了实现 WebSocket 通信，在 HTTP 连接建立之后，需要完成一次 “握手”（ Handshaking）的步骤。  
+
+![](./img/websocket.png)
 
 ### 握手-请求  
 
 为了实现 WebSocket 通信，需要用到 HTTP 的 Upgrade 首部字段，告知服务器通信协议发生改变，以达到握手的目的。  
 
-```
-GET /chat HTTP/1.1
-Host: server.example.com
-Upgrade: websocket
-Connection: Upgrade
-Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-Origin: http://example.com
-Sec-WebSocket-Protocol: chat, superchat
-Sec-WebSocket-Version: 13
-```
+WebSocket的握手是一个标准的 HTTP GET 请求，但要带上两个协议升级的专用头字段：
 
-Sec-WebSocket-Key 字段内记录着握手过程中必不可少的键值。
+- “Connection: Upgrade”，表示要求协议“升级”
+- “Upgrade: websocket”，表示要“升级”成 WebSocket 协议
 
-Sec-WebSocket-Protocol 字段内记录使用的子协议。子协议按 WebSocket 协议标准在连接分开使用时，定义那些连接的名称。  
+为了防止普通的 HTTP 消息被“意外”识别成 WebSocket，握手消息还增加了两个额外的认证用头字段：
+
+- Sec-WebSocket-Key：一个 Base64 编码的 16 字节随机数，作为简单的认证密钥
+- Sec-WebSocket-Version：协议的版本号，当前必须是 13
+
+![](./img/upgrade_websocket.png)
 
 ### 握手-响应  
 
-对于之前的请求，返回状态码 101 Switching Protocols 的响应。  
+服务器收到 HTTP 请求报文，看到上面的四个字段，就知道这不是一个普通的 GET 请求，而是 WebSocket 的升级请求，于是就不走普通的 HTTP 处理流程，而是构造一个特殊的 “101 Switching Protocols” 响应报文，通知客户端，接下来就不用 HTTP 了，全改用 WebSocket 协议通信。
 
-```
-HTTP/1.1 101 Switching Protocols
-Upgrade: websocket
-Connection: Upgrade
-Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
-Sec-WebSocket-Protocol: chat
-```
+![](./img/switch_to_websocket.png)
 
-Sec-WebSocket-Accept 的字段值是由握手请求中的 Sec-WebSocketKey 的字段值生成的。
-
-成功握手确立 WebSocket 连接之后，通信时不再使用 HTTP 的数据帧，而采用 WebSocket 独立的数据帧。  
-
-![](./img/websocket.png)
+WebSocket 的握手响应报文也是有特殊格式的，要用字段 “Sec-WebSocket-Accept” 验证客户端请求报文，同样也是为了防止误连接。具体的做法是把请求头里“ Sec-WebSocket-Key” 的值，加上一个专用的UUID “258EAFA5-E914-47DA-95CA-C5AB0DC85B11”，再计算SHA-1摘要。客户端收到响应报文，就可以用同样的算法，比对值是否相等，如果相等，就说明返回的报文确实是刚才握手时连接的服务器，认证成功。握手完成，后续传输的数据就不再是HTTP报文，而是WebSocket格式的二进制帧了。
 
 # HTTP/2.0  
 
