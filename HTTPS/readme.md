@@ -302,6 +302,85 @@ TLS包含几个子协议，你也可以理解为它是由几个不同职责的�
 
 ![](./img/rsa.png)
 
+# TLS 1.3
+
+TLS1.2 已经是10年前（2008年）的“老”协议了，在安全、性能等方面已经跟不上如今的互联网了。TLS1.3 终于在 2018 年“粉墨登场”，再次确立了信息安全领域的新标准。
+
+## 最大化兼容性
+
+为了保证这些被广泛部署的“老设备”能够继续使用，避免新协议带来的“冲击”，TLS1.3 不得不做出妥协，保持现有的记录格式不变，通过“伪装”来实现兼容，使得TLS1.3 看上去“像是” TLS1.2。
+
+这要用到一个新的扩展协议（Extension Protocol），通过在记录末尾添加一系列的“扩展字段”来增加新的功能，老版本的 TLS 不认识它可以直接忽略，这就实现了“后向兼容”。在记录头的 Version 字段被兼容性“固定”的情况下，只要是 TLS1.3 协议，握手的 “Hello” 消息后面就必须有 “supported_versions” 扩展，它标记了 TLS 的版本号，使用它就能区分新旧协议：
+
+```
+Handshake Protocol: Client Hello
+    Version: TLS 1.2 (0x0303)
+    Extension: supported_versions (len=11)
+        Supported Version: TLS 1.3 (0x0304)
+        Supported Version: TLS 1.2 (0x0303)
+```
+
+TLS1.3 利用扩展实现了许多重要的功能，比如：“supported_groups”，“key_share”，“signature_algorithms”，“server_name” 等。
+
+## 强化安全
+
+TLS1.2 在十来年的应用中获得了许多宝贵的经验，陆续发现了很多的漏洞和加密算法的弱点，所以 TLS1.3 就在协议里修补了这些不安全因素。比如：
+
+- 伪随机数函数由PRF升级为HKDF（HMAC-based Extract-and-Expand Key Derivation Function）
+- 明确禁止在记录协议里使用压缩
+- 废除了 RC4、DES 对称加密算法
+- 废除了 ECB、CBC 等传统分组模式
+- 废除了 MD5、SHA1、SHA-224 摘要算法
+- 废除了 RSA、DH 密钥交换算法和许多命名曲线
+
+TLS1.3 里只保留了 AES、ChaCha20 对称加密算法，分组模式只能用 AEAD的GCM、CCM 和 Poly1305，摘要算法只能用 SHA256、SHA384 密钥交换算法只有 ECDHE 和 DHE，椭圆曲线也被“砍”到只剩 P-256 和 x25519 等 5 种。现在的 TLS1.3 里只有 5个 套件，无论是客户端还是服务器都不会再犯“选择困难症”了：
+
+![](./img/cipher_suites.png)
+
+浏览器默认会使用 ECDHE 而不是 RSA 做密钥交换，这是因为它不具有“前向安全”（Forward Secrecy）。假设有这么一个很有耐心的黑客，一直在长期收集混合加密系统收发的所有报文。如果加密系统使用服务器证书里的 RSA 做密钥交换，一旦私钥泄露或被破解，那么黑客就能够使用私钥解密出之前所有报文的 “Pre-Master”，再算出会话密钥，破解所有密文。
+
+而 ECDHE 算法在每次握手时都会生成一对临时的公钥和私钥，每次通信的密钥对都是不同的，也就是“一次一密”，即使黑客花大力气破解了这一次的会话密钥，也只是这次通信被攻击，之前的历史消息不会受到影响，仍然是安全的。所以现在主流的服务器和浏览器在握手阶段都已经不再使用 RSA，改用 ECDHE，而 TLS1.3 在协议里明确废除 RSA 和 DH 则在标准层面保证了“前向安全”。
+
+## 提升性能
+
+HTTPS 建立连接时除了要做 TCP 握手，还要做 TLS 握手，在 1.2 中会多花两个消息往返（2-RTT），可能导致几十毫秒甚至上百毫秒的延迟，在移动网络中延迟还会更严重。现在因为密码套件大幅度简化，也就没有必要再像以前那样走复杂的协商流程了。TLS1.3 压缩了以前的“Hello”协商过程，删除了 “Key Exchange” 消息，把握手时间减少到了 “1-RTT”，效率提高了一倍。
+
+客户端在 “Client Hello” 消息里直接用 “supported_groups” 带上支持的曲线，比如：P-256、x25519，用 “key_share” 带上曲线对应的客户端公钥参数，用“signature_algorithms” 带上签名算法。服务器收到后在这些扩展里选定一个曲线和参数，再用 “key_share” 扩展返回服务器这边的公钥参数，就实现了双方的密钥交换，后面的流程就和1.2 基本一样了。
+
+![](./img/tls1.3.png)
+
+## 握手分析
+
+![](./img/tls1.3_handshake.png)
+
+在TCP建立连接之后，浏览器首先还是发一个 “Client Hello”。
+
+因为 1.3 的消息兼容 1.2，所以开头的版本号、支持的密码套件和随机数（Client Random）结构都是一样的：
+
+```
+Handshake Protocol: Client Hello
+    Version: TLS 1.2 (0x0303)
+    Random: cebeb6c05403654d66c2329…
+    Cipher Suites (18 suites)
+        Cipher Suite: TLS_AES_128_GCM_SHA256 (0x1301)
+        Cipher Suite: TLS_CHACHA20_POLY1305_SHA256 (0x1303)
+        Cipher Suite: TLS_AES_256_GCM_SHA384 (0x1302)
+    Extension: supported_versions (len=9)
+        Supported Version: TLS 1.3 (0x0304)
+        Supported Version: TLS 1.2 (0x0303)
+    Extension: supported_groups (len=14)
+        Supported Groups (6 groups)
+            Supported Group: x25519 (0x001d)
+            Supported Group: secp256r1 (0x0017)
+    Extension: key_share (len=107)
+        Key Share extension
+            Client Key Share Length: 105
+            Key Share Entry: Group: x25519
+            Key Share Entry: Group: secp256r1
+```
+
+
+
 # HTTPS 的优化
 
 HTTPS 连接大致上可以划分为两个部分：
